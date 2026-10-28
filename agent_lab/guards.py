@@ -122,7 +122,7 @@ class SessionStore:
             return sorted(self._data.get(session_id, {}))
 
 
-NUMBER_RE = re.compile(r"(?<![\w.])\$?(\d+(?:\.\d+)?)(?![\w.])")
+NUMBER_RE = re.compile(r"(?<![\w.-])\$?(\d+(?:\.\d+)?)(?![\w.])")  # "-" excluded so sku-300 is not the number 300
 SKU_RE = re.compile(r"\bsku-\d+\b", re.IGNORECASE)
 
 
