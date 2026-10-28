@@ -10,7 +10,6 @@
 """
 from __future__ import annotations
 
-import concurrent.futures as cf
 import re
 import threading
 import time
@@ -69,7 +68,6 @@ class ToolRunner:
     breaker_threshold: int = 2     # consecutive failures before the circuit opens
     failures: dict[str, int] = field(default_factory=dict)
     log: list[dict[str, Any]] = field(default_factory=list)
-    _pool: cf.ThreadPoolExecutor = field(default_factory=lambda: cf.ThreadPoolExecutor(max_workers=4))
 
     def call(self, name: str, budget: Budget, **kwargs) -> dict[str, Any]:
         if name not in self.tools:
@@ -80,14 +78,12 @@ class ToolRunner:
         last: Exception | None = None
         for attempt in range(1, self.max_attempts + 1):
             budget.charge_tool()
-            future = self._pool.submit(self.tools[name], **kwargs)
             try:
-                result = future.result(timeout=self.timeout)
+                result = _run_with_timeout(self.tools[name], kwargs, self.timeout)
                 self.failures[name] = 0
                 self.log.append({"tool": name, "attempt": attempt, "outcome": "ok"})
                 return result
-            except cf.TimeoutError:
-                future.cancel()
+            except TimeoutError:
                 self.failures[name] = self.failures.get(name, 0) + 1
                 self.log.append({"tool": name, "attempt": attempt, "outcome": "timeout"})
                 raise ToolTimeout(name, self.timeout)  # do not retry a hang; the worker may still be running
@@ -100,6 +96,33 @@ class ToolRunner:
                 time.sleep(self.backoff * attempt)
         assert last is not None
         raise last
+
+
+def _run_with_timeout(fn: Callable[..., Any], kwargs: dict[str, Any], seconds: float) -> Any:
+    """Run fn in a daemon thread and give up after `seconds`.
+
+    Python cannot kill a thread, so a timed-out worker keeps running until it
+    finishes on its own. Using a *daemon* thread means it at least cannot hold
+    the process open at exit. (The first version used ThreadPoolExecutor, whose
+    non-daemon workers made a 5-second hang delay interpreter shutdown by 5s.)
+    Real systems need cancellation at the I/O layer, e.g. request timeouts.
+    """
+    box: dict[str, Any] = {}
+
+    def target():
+        try:
+            box["result"] = fn(**kwargs)
+        except BaseException as exc:  # noqa: BLE001 - re-raised in caller
+            box["error"] = exc
+
+    t = threading.Thread(target=target, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        raise TimeoutError
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
 
 
 class SessionStore:
