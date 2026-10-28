@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest --cov=agent_lab --cov-report=term-missing
+      - name: Run all scenarios and fail if any expectation is not met
+        run: agent-lab run --report reports/ci-report.md --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scenario-report
+          path: reports/ci-report.md
