@@ -27,7 +27,7 @@ def to_markdown(results: list[ScenarioResult], model_name: str) -> str:
     for r in results:
         lines.append(f"| {r.name} | {'PASS' if r.passed else 'FAIL'} | `{r.result.status}` | {len(r.tool_calls)} |")
     for r in results:
-        lines += ["", f"## {r.name}", "", r.description, "", f"Task: _{r.result.steps and 'see steps' or ''}_".replace("Task: __", "").strip()]
+        lines += ["", f"## {r.name}", "", r.description, "", f"Task: _{r.task}_"]
         lines += ["", "| Check | OK | Observed |", "|---|---|---|"]
         for name, ok, observed in r.checks:
             lines.append(f"| {name} | {'yes' if ok else 'NO'} | `{observed[:160].replace('|', '/')}` |")

@@ -25,6 +25,7 @@ class ScenarioResult:
     checks: list[Check]
     result: AgentResult
     tool_calls: list[str]
+    task: str = ""
 
 
 @dataclass
@@ -45,7 +46,7 @@ class Scenario:
             result = agent.run(self.task, sid)
         assert result is not None
         checks = self.expect(result, faults, agent)
-        return ScenarioResult(self.name, self.description, all(c[1] for c in checks), checks, result, list(faults.calls))
+        return ScenarioResult(self.name, self.description, all(c[1] for c in checks), checks, result, list(faults.calls), self.task)
 
 
 def _agent(model: Model, faults: FaultInjector, budget: Callable[[], Budget] = Budget, timeout: float = 0.5) -> Agent:
