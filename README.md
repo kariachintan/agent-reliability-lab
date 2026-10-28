@@ -1,5 +1,7 @@
 # agent-reliability-lab
 
+![CI](https://github.com/kariachintan/agent-reliability-lab/actions/workflows/ci.yml/badge.svg)
+
 A runnable playground for the boring, decisive parts of tool-using AI agents: what happens when a tool fails, hangs, or the model says something it never checked. Seven fault-injection scenarios run in under a second, offline, and produce a report that shows observed behaviour against stated expectations.
 
 > Tools, catalog data, and faults are synthetic. The default planner is a scripted policy, labelled `simulated` everywhere; it is not a language model. This is a portfolio project built from public knowledge and is not an employer project.
